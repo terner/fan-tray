@@ -188,12 +188,22 @@ int main(int argc, char* argv[]) {
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     const bool has_pwm = !state.paths.pwm_path.empty();
+    if (has_pwm) {
+        if (auto cur_pwm = read_trimmed(state.paths.pwm_path)) {
+            try {
+                state.turbo_on = (std::stoi(*cur_pwm) >= 240);
+            } catch (...) {}
+        }
+    }
     if (!has_pwm) {
-        GtkWidget* ro_item = gtk_menu_item_new_with_label("Turbo Mode: Read-Only (nct6775 not loaded)");
+        GtkWidget* ro_item = gtk_menu_item_new_with_label("Turbo Mode: Read-Only (nct6775/it87 not loaded)");
         gtk_widget_set_sensitive(ro_item, FALSE);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), ro_item);
     } else {
         state.turbo_item = gtk_check_menu_item_new_with_label("Turbo Mode (100% Fan)");
+        if (state.turbo_on) {
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(state.turbo_item), TRUE);
+        }
         g_signal_connect(state.turbo_item, "toggled", G_CALLBACK(toggle_turbo), &state);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), state.turbo_item);
 

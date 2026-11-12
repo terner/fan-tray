@@ -1,9 +1,8 @@
-CXX := g++
-CXXFLAGS := -std=c++17 -O2 -Wall -Wextra
-PKGS := gtk+-3.0 ayatana-appindicator3-0.1
+CC := gcc
+CFLAGS := -std=c11 -O2 -Wall -Wextra
 
-fan-tray: main.cpp
-	$(CXX) $(CXXFLAGS) main.cpp -o fan-tray $$(pkg-config --cflags --libs $(PKGS))
+fan-tray-lite: fan-tray-lite.c
+	$(CC) $(CFLAGS) fan-tray-lite.c -o fan-tray-lite $$(pkg-config --cflags --libs libsystemd)
 
 clean:
-	rm -f fan-tray
+	rm -f fan-tray-lite

@@ -56,9 +56,9 @@ FanPaths discover_chassis3() {
                 }
             }
         }
-        // 2. Check if Super I/O (nct6775) exposes pwm4 (usually Chassis Fan 3)
+        // 2. Check if Super I/O (nct6775 or it8665) exposes pwm4 (Chassis Fan 3)
         auto name = read_trimmed(dir + "/name");
-        if (name && name->rfind("nct67", 0) == 0) {
+        if (name && (name->rfind("nct67", 0) == 0 || name->rfind("it86", 0) == 0 || name->rfind("it87", 0) == 0)) {
             std::string pwm = dir + "/pwm4";
             std::string pwm_en = dir + "/pwm4_enable";
             if (fs::exists(pwm)) {
@@ -106,7 +106,7 @@ void toggle_turbo(GtkCheckMenuItem* item, gpointer user_data) {
         write_value(state->paths.pwm_path, "255");  // 100% Turbo
     } else {
         if (!state->paths.pwm_enable_path.empty()) {
-            write_value(state->paths.pwm_enable_path, "5");  // Back to BIOS/Smart Fan curve
+            write_value(state->paths.pwm_enable_path, "2");  // Back to BIOS/Smart Fan curve
         }
     }
 }

@@ -90,23 +90,31 @@ struct AppState {
     AppIndicator* indicator = nullptr;
     GtkWidget* status_item = nullptr;
     GtkWidget* turbo_item = nullptr;
+    GtkWidget* auto_turbo_item = nullptr;
     bool turbo_on = false;
+    bool auto_turbo_enabled = true;
+    bool updating_ui = false;
     FanPaths paths;
 };
 
-void toggle_turbo(GtkCheckMenuItem* item, gpointer user_data) {
-    auto* state = static_cast<AppState*>(user_data);
+void apply_fan_pwm(AppState* state, bool turbo) {
+    state->turbo_on = turbo;
     if (state->paths.pwm_path.empty()) return;
-
-    state->turbo_on = gtk_check_menu_item_get_active(item);
     if (!state->paths.pwm_enable_path.empty()) {
         write_value(state->paths.pwm_enable_path, "1");  // Manual PWM
     }
-    if (state->turbo_on) {
-        write_value(state->paths.pwm_path, "255");  // 100% Turbo
-    } else {
-        write_value(state->paths.pwm_path, "135");  // ~53% Normal/Quiet
-    }
+    write_value(state->paths.pwm_path, turbo ? "255" : "135");
+}
+
+void toggle_turbo(GtkCheckMenuItem* item, gpointer user_data) {
+    auto* state = static_cast<AppState*>(user_data);
+    if (state->updating_ui) return;
+    apply_fan_pwm(state, gtk_check_menu_item_get_active(item));
+}
+
+void toggle_auto_turbo(GtkCheckMenuItem* item, gpointer user_data) {
+    auto* state = static_cast<AppState*>(user_data);
+    state->auto_turbo_enabled = gtk_check_menu_item_get_active(item);
 }
 
 gboolean update_tray(gpointer user_data) {
@@ -120,6 +128,24 @@ gboolean update_tray(gpointer user_data) {
     }
 
     auto v100_temp = read_v100_temp();
+    if (v100_temp && state->auto_turbo_enabled && !state->paths.pwm_path.empty()) {
+        if (*v100_temp >= 60 && !state->turbo_on) {
+            apply_fan_pwm(state, true);
+            if (state->turbo_item) {
+                state->updating_ui = true;
+                gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(state->turbo_item), TRUE);
+                state->updating_ui = false;
+            }
+        } else if (*v100_temp <= 55 && state->turbo_on) {
+            apply_fan_pwm(state, false);
+            if (state->turbo_item) {
+                state->updating_ui = true;
+                gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(state->turbo_item), FALSE);
+                state->updating_ui = false;
+            }
+        }
+    }
+
     std::string label = "CHA3: " + rpm_str + " RPM";
     if (v100_temp) {
         label += " | V100: " + std::to_string(*v100_temp) + "°C";
@@ -170,6 +196,11 @@ int main(int argc, char* argv[]) {
         state.turbo_item = gtk_check_menu_item_new_with_label("Turbo Mode (100% Fan)");
         g_signal_connect(state.turbo_item, "toggled", G_CALLBACK(toggle_turbo), &state);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), state.turbo_item);
+
+        state.auto_turbo_item = gtk_check_menu_item_new_with_label("Auto Turbo (V100 ≥ 60°C)");
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(state.auto_turbo_item), TRUE);
+        g_signal_connect(state.auto_turbo_item, "toggled", G_CALLBACK(toggle_auto_turbo), &state);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), state.auto_turbo_item);
     }
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());

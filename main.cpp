@@ -99,15 +99,13 @@ void toggle_turbo(GtkCheckMenuItem* item, gpointer user_data) {
     if (state->paths.pwm_path.empty()) return;
 
     state->turbo_on = gtk_check_menu_item_get_active(item);
+    if (!state->paths.pwm_enable_path.empty()) {
+        write_value(state->paths.pwm_enable_path, "1");  // Manual PWM
+    }
     if (state->turbo_on) {
-        if (!state->paths.pwm_enable_path.empty()) {
-            write_value(state->paths.pwm_enable_path, "1");  // Manual PWM
-        }
         write_value(state->paths.pwm_path, "255");  // 100% Turbo
     } else {
-        if (!state->paths.pwm_enable_path.empty()) {
-            write_value(state->paths.pwm_enable_path, "2");  // Back to BIOS/Smart Fan curve
-        }
+        write_value(state->paths.pwm_path, "135");  // ~53% Normal/Quiet
     }
 }
 

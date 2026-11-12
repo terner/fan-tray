@@ -214,6 +214,10 @@ int main(int argc, char* argv[]) {
     }
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+    GtkWidget* ver_item = gtk_menu_item_new_with_label("fan-tray v1.0.0");
+    gtk_widget_set_sensitive(ver_item, FALSE);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), ver_item);
+
     GtkWidget* quit_item = gtk_menu_item_new_with_label("Quit");
     g_signal_connect(quit_item, "activate", G_CALLBACK(on_quit), nullptr);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), quit_item);
